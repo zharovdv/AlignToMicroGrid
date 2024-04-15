@@ -23,6 +23,7 @@ var
   GridSize: TCoord;
   LocX, LocY, Len: Integer;
   LabelText: String;
+  FormCheckListBox1: TCheckListBox;
 
   // Add stubs only to selected components or to all
   OnlySelectedComps: Boolean;
@@ -164,6 +165,33 @@ begin
   Result := L;
 end;
 
+function StrToAutoPos(iteration: String): Integer;
+begin
+  Case iteration of
+    'ePolyline':
+      Result := ePolyline;
+    'eLabel':
+      Result := eLabel;
+    'eTextFrame':
+      Result := eTextFrame;
+  else
+    Result := -1;
+  end;
+end;
+
+function CheckFilter(v: Integer): Boolean;
+var
+  i: Integer;
+begin
+  Result := False;
+  for i := 0 to FormCheckListBox1.Items.Count - 1 do
+  begin
+    if (StrToAutoPos(FormCheckListBox1.Items[i]) = v) and
+      FormCheckListBox1.Checked[i] then
+      Result := True;
+  end;
+end;
+
 Procedure AddWireStubsSchRun(Dummy: String = '');
 var
   componentCount: Integer;
@@ -171,7 +199,7 @@ var
   Count_, PlaceCnt_: Integer;
   Loc: TLocation;
   LocX, LocY: Integer;
-  I, m: Integer;
+  i, m: Integer;
 Begin
   If SchServer = Nil Then
   begin
@@ -217,48 +245,49 @@ Begin
 
   Try
     SchComponent := SchIterator.FirstSchObject;
-    While SchComponent <> Nil Do
-    Begin
-      if (OnlySelectedComps = False) OR (SchComponent.Selection = True) then
+    if CheckFilter(ePolyline) then
+      While SchComponent <> Nil Do
       Begin
-        Inc(componentCount);
-        Location := SchComponent.Location;
+        if (OnlySelectedComps = False) OR (SchComponent.Selection = True) then
+        Begin
+          Inc(componentCount);
+          Location := SchComponent.Location;
 
-        LocX := CoordToMMs(Location.X); // Location.X / cInternalPrecision;
-        LocY := CoordToMMs(Location.Y); // Location.Y / cInternalPrecision;
-
-        AddMessage('Location', Format('%s = %f , %f',
-          [SchComponent.GetState_IdentifierString, (LocX), (LocY)]));
-
-        SchServer.RobotManager.SendMessage(SchComponent.I_ObjectAddress,
-          c_BroadCast, SCHM_BeginModify, c_NoEventData);
-
-        SchComponent.Location := RoundLocation(SchComponent.Location);
-
-        for I := 0 to SchComponent.VerticesCount - 1 do
-        begin
-          Location := SchComponent.Vertex[I + 1];
           LocX := CoordToMMs(Location.X); // Location.X / cInternalPrecision;
           LocY := CoordToMMs(Location.Y); // Location.Y / cInternalPrecision;
-          // AddMessage('Location', Format('%s = %f , %f',   ['Vertice',(LocX), (LocY)]));
 
-          SchComponent.Vertex[I + 1] :=
-            RoundLocation(SchComponent.Vertex[I + 1]);
-        end;
-        // Location := Point
-        SchServer.RobotManager.SendMessage(SchComponent.I_ObjectAddress,
-          c_BroadCast, SCHM_EndModify, c_NoEventData);
+          AddMessage('Location', Format('%s = %f , %f',
+            [SchComponent.GetState_IdentifierString, (LocX), (LocY)]));
+
+          SchServer.RobotManager.SendMessage(SchComponent.I_ObjectAddress,
+            c_BroadCast, SCHM_BeginModify, c_NoEventData);
+
+          SchComponent.Location := RoundLocation(SchComponent.Location);
+
+          for i := 0 to SchComponent.VerticesCount - 1 do
+          begin
+            Location := SchComponent.Vertex[i + 1];
+            LocX := CoordToMMs(Location.X); // Location.X / cInternalPrecision;
+            LocY := CoordToMMs(Location.Y); // Location.Y / cInternalPrecision;
+            // AddMessage('Location', Format('%s = %f , %f',   ['Vertice',(LocX), (LocY)]));
+
+            SchComponent.Vertex[i + 1] :=
+              RoundLocation(SchComponent.Vertex[i + 1]);
+          end;
+          // Location := Point
+          SchServer.RobotManager.SendMessage(SchComponent.I_ObjectAddress,
+            c_BroadCast, SCHM_EndModify, c_NoEventData);
+        End;
+        SchComponent := SchIterator.NextSchObject;
+
+        ProgressBar1.Position := ProgressBar1.Position + 1;
+        ProgressBar1.Update;
+        {
+          AddMessage('APS Status',
+          Format('%d of %d silkscreens placed (%f%%) in %d Second(s)',
+          [PlaceCnt_, Count_, PlaceCnt_ / Count_ * 100,
+          Trunc((Now() - StartTime) * 86400)])); }
       End;
-      SchComponent := SchIterator.NextSchObject;
-
-      ProgressBar1.Position := ProgressBar1.Position + 1;
-      ProgressBar1.Update;
-      {
-        AddMessage('APS Status',
-        Format('%d of %d silkscreens placed (%f%%) in %d Second(s)',
-        [PlaceCnt_, Count_, PlaceCnt_ / Count_ * 100,
-        Trunc((Now() - StartTime) * 86400)])); }
-    End;
   Finally
     SchDoc.SchIterator_Destroy(SchIterator);
     if (componentCount = 0) then
@@ -290,37 +319,38 @@ Begin
 
   Try
     SchComponent := SchIterator.FirstSchObject;
-    While SchComponent <> Nil Do
-    Begin
-      // AddMessage('Location', Format('%s ',   [SchComponent.GetState_IdentifierString,(LocX), (LocY)]));
-
-      if (OnlySelectedComps = False) OR (SchComponent.Selection = True) then
+    if CheckFilter(eLabel) then
+      While SchComponent <> Nil Do
       Begin
-        Inc(componentCount);
-        Location := SchComponent.Location;
+        // AddMessage('Location', Format('%s ',   [SchComponent.GetState_IdentifierString,(LocX), (LocY)]));
 
-        LocX := CoordToMMs(Location.X); // Location.X / cInternalPrecision;
-        LocY := CoordToMMs(Location.Y); // Location.Y / cInternalPrecision;
+        if (OnlySelectedComps = False) OR (SchComponent.Selection = True) then
+        Begin
+          Inc(componentCount);
+          Location := SchComponent.Location;
 
-        AddMessage('Location', Format('%s = %f , %f',
-          [SchComponent.GetState_IdentifierString, (LocX), (LocY)]));
+          LocX := CoordToMMs(Location.X); // Location.X / cInternalPrecision;
+          LocY := CoordToMMs(Location.Y); // Location.Y / cInternalPrecision;
 
-        SchServer.RobotManager.SendMessage(SchComponent.I_ObjectAddress,
-          c_BroadCast, SCHM_BeginModify, c_NoEventData);
-        SchComponent.Location := RoundLocation(SchComponent.Location);
-        SchServer.RobotManager.SendMessage(SchComponent.I_ObjectAddress,
-          c_BroadCast, SCHM_EndModify, c_NoEventData);
+          AddMessage('Location', Format('%s = %f , %f',
+            [SchComponent.GetState_IdentifierString, (LocX), (LocY)]));
+
+          SchServer.RobotManager.SendMessage(SchComponent.I_ObjectAddress,
+            c_BroadCast, SCHM_BeginModify, c_NoEventData);
+          SchComponent.Location := RoundLocation(SchComponent.Location);
+          SchServer.RobotManager.SendMessage(SchComponent.I_ObjectAddress,
+            c_BroadCast, SCHM_EndModify, c_NoEventData);
+        End;
+        SchComponent := SchIterator.NextSchObject;
+
+        ProgressBar1.Position := ProgressBar1.Position + 1;
+        ProgressBar1.Update;
+        {
+          AddMessage('APS Status',
+          Format('%d of %d components aligned (%f%%) in %d Second(s)',
+          [PlaceCnt_, Count_, PlaceCnt_ / Count_ * 100,
+          Trunc((Now() - StartTime) * 86400)])); }
       End;
-      SchComponent := SchIterator.NextSchObject;
-
-      ProgressBar1.Position := ProgressBar1.Position + 1;
-      ProgressBar1.Update;
-      {
-        AddMessage('APS Status',
-        Format('%d of %d components aligned (%f%%) in %d Second(s)',
-        [PlaceCnt_, Count_, PlaceCnt_ / Count_ * 100,
-        Trunc((Now() - StartTime) * 86400)])); }
-    End;
   Finally
     SchDoc.SchIterator_Destroy(SchIterator);
     if (componentCount = 0) then
@@ -349,37 +379,38 @@ Begin
 
   Try
     SchComponent := SchIterator.FirstSchObject;
-    While SchComponent <> Nil Do
-    Begin
-      // AddMessage('Location', Format('%s ',   [SchComponent.GetState_IdentifierString,(LocX), (LocY)]));
-
-      if (OnlySelectedComps = False) OR (SchComponent.Selection = True) then
+    if CheckFilter(eTextFrame) then
+      While SchComponent <> Nil Do
       Begin
-        Inc(componentCount);
-        Location := SchComponent.Location;
+        // AddMessage('Location', Format('%s ',   [SchComponent.GetState_IdentifierString,(LocX), (LocY)]));
 
-        LocX := CoordToMMs(Location.X); // Location.X / cInternalPrecision;
-        LocY := CoordToMMs(Location.Y); // Location.Y / cInternalPrecision;
+        if (OnlySelectedComps = False) OR (SchComponent.Selection = True) then
+        Begin
+          Inc(componentCount);
+          Location := SchComponent.Location;
 
-        AddMessage('Location', Format('%s = %f , %f',
-          [SchComponent.GetState_IdentifierString, (LocX), (LocY)]));
+          LocX := CoordToMMs(Location.X); // Location.X / cInternalPrecision;
+          LocY := CoordToMMs(Location.Y); // Location.Y / cInternalPrecision;
 
-        SchServer.RobotManager.SendMessage(SchComponent.I_ObjectAddress,
-          c_BroadCast, SCHM_BeginModify, c_NoEventData);
-        SchComponent.Location := RoundLocation(SchComponent.Location);
-        SchServer.RobotManager.SendMessage(SchComponent.I_ObjectAddress,
-          c_BroadCast, SCHM_EndModify, c_NoEventData);
+          AddMessage('Location', Format('%s = %f , %f',
+            [SchComponent.GetState_IdentifierString, (LocX), (LocY)]));
+
+          SchServer.RobotManager.SendMessage(SchComponent.I_ObjectAddress,
+            c_BroadCast, SCHM_BeginModify, c_NoEventData);
+          SchComponent.Location := RoundLocation(SchComponent.Location);
+          SchServer.RobotManager.SendMessage(SchComponent.I_ObjectAddress,
+            c_BroadCast, SCHM_EndModify, c_NoEventData);
+        End;
+        SchComponent := SchIterator.NextSchObject;
+
+        ProgressBar1.Position := ProgressBar1.Position + 1;
+        ProgressBar1.Update;
+        {
+          AddMessage('APS Status',
+          Format('%d of %d components aligned (%f%%) in %d Second(s)',
+          [PlaceCnt_, Count_, PlaceCnt_ / Count_ * 100,
+          Trunc((Now() - StartTime) * 86400)])); }
       End;
-      SchComponent := SchIterator.NextSchObject;
-
-      ProgressBar1.Position := ProgressBar1.Position + 1;
-      ProgressBar1.Update;
-      {
-        AddMessage('APS Status',
-        Format('%d of %d components aligned (%f%%) in %d Second(s)',
-        [PlaceCnt_, Count_, PlaceCnt_ / Count_ * 100,
-        Trunc((Now() - StartTime) * 86400)])); }
-    End;
   Finally
     SchDoc.SchIterator_Destroy(SchIterator);
     if (componentCount = 0) then
@@ -462,17 +493,11 @@ begin
     IniFile.WriteBool('General', 'FixedWidthEnabled', FixedWidthChk.Checked);
     IniFile.WriteString('General', 'FixedWidth', FixedWidthEdt.Text); }
   IniFile.WriteString('General', 'PositionDelta', PositionDeltaEdt.Text);
-  {
-    // I know about loops, but...
-    IniFile.WriteBool('General', 'Position1', PositionsClb.Checked[0]);
-    IniFile.WriteBool('General', 'Position2', PositionsClb.Checked[1]);
-    IniFile.WriteBool('General', 'Position3', PositionsClb.Checked[2]);
-    IniFile.WriteBool('General', 'Position4', PositionsClb.Checked[3]);
-    IniFile.WriteBool('General', 'Position5', PositionsClb.Checked[4]);
-    IniFile.WriteBool('General', 'Position6', PositionsClb.Checked[5]);
-    IniFile.WriteBool('General', 'Position7', PositionsClb.Checked[6]);
-    IniFile.WriteBool('General', 'Position8', PositionsClb.Checked[7]);
-  }
+
+  // I know about loops, but...
+  IniFile.WriteBool('General', 'Position1', PositionsClb.Checked[0]);
+  IniFile.WriteBool('General', 'Position2', PositionsClb.Checked[1]);
+  IniFile.WriteBool('General', 'Position3', PositionsClb.Checked[2]);
 
   IniFile.Free;
 end;
@@ -508,25 +533,15 @@ begin
     FixedWidthEdt.Text); }
   PositionDeltaEdt.Text := IniFile.ReadString('General', 'PositionDelta',
     PositionDeltaEdt.Text);
-  {
-    // I know about loops, but...
-    PositionsClb.Checked[0] := IniFile.ReadString('General', 'Position1',
+
+  // I know about loops, but...
+  PositionsClb.Checked[0] := IniFile.ReadString('General', 'Position1',
     PositionsClb.Checked[0]);
-    PositionsClb.Checked[1] := IniFile.ReadString('General', 'Position2',
+  PositionsClb.Checked[1] := IniFile.ReadString('General', 'Position2',
     PositionsClb.Checked[1]);
-    PositionsClb.Checked[2] := IniFile.ReadString('General', 'Position3',
+  PositionsClb.Checked[2] := IniFile.ReadString('General', 'Position3',
     PositionsClb.Checked[2]);
-    PositionsClb.Checked[3] := IniFile.ReadString('General', 'Position4',
-    PositionsClb.Checked[3]);
-    PositionsClb.Checked[4] := IniFile.ReadString('General', 'Position5',
-    PositionsClb.Checked[4]);
-    PositionsClb.Checked[5] := IniFile.ReadString('General', 'Position6',
-    PositionsClb.Checked[5]);
-    PositionsClb.Checked[6] := IniFile.ReadString('General', 'Position7',
-    PositionsClb.Checked[6]);
-    PositionsClb.Checked[7] := IniFile.ReadString('General', 'Position8',
-    PositionsClb.Checked[7]);
-  }
+
   IniFile.Free;
 end;
 
@@ -542,7 +557,7 @@ var
   Place_OverComp: Boolean;
   Place_RestoreOriginal: Boolean;
   StrNoSpace: TPCBString;
-  I: Integer;
+  i: Integer;
   DisplayUnit: TUnit;
   tmpx, tmpy, s: String;
 begin
@@ -630,24 +645,18 @@ begin
 
     RotationStrategy := RotationStrategyCb.GetItemIndex();
   }
-  {
-    PositionsClb.Items.Clear;
 
-    PositionsClb.Items.AddObject('TopCenter', eAutoPos_TopCenter);
-    PositionsClb.Items.AddObject('CenterRight', eAutoPos_CenterRight);
-    PositionsClb.Items.AddObject('BottomCenter', eAutoPos_BottomCenter);
-    PositionsClb.Items.AddObject('CenterLeft', eAutoPos_CenterLeft);
-    PositionsClb.Items.AddObject('TopLeft', eAutoPos_TopLeft);
-    PositionsClb.Items.AddObject('TopRight', eAutoPos_TopRight);
-    PositionsClb.Items.AddObject('BottomLeft', eAutoPos_BottomLeft);
-    PositionsClb.Items.AddObject('BottomRight', eAutoPos_BottomRight);
+  PositionsClb.Items.Clear;
 
-    PositionsClb.Checked[0] := True;
-    PositionsClb.Checked[1] := True;
-    PositionsClb.Checked[2] := True;
-    PositionsClb.Checked[3] := True;
-  }
-  // FormCheckListBox1 := PositionsClb;
+  PositionsClb.Items.AddObject('ePolyline', ePolyline);
+  PositionsClb.Items.AddObject('eLabel', eLabel);
+  PositionsClb.Items.AddObject('eTextFrame', eTextFrame);
+
+  PositionsClb.Checked[0] := True;
+  PositionsClb.Checked[1] := True;
+  PositionsClb.Checked[2] := True;
+
+  FormCheckListBox1 := PositionsClb;
 
   HintLbl.Left := (Form_PlaceSilk.ClientWidth - HintLbl.Width) div 2;
 

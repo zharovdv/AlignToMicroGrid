@@ -43,10 +43,9 @@ object Form_PlaceSilk: TForm_PlaceSilk
   object Label2: TLabel
     Left = 226
     Top = 196
-    Width = 41
+    Width = 24
     Height = 13
-    Caption = 'Position:'
-    Visible = False
+    Caption = 'Kind:'
   end
   object HintLbl: TLabel
     Left = 136
@@ -219,7 +218,6 @@ object Form_PlaceSilk: TForm_PlaceSilk
       'BottomLeft'
       'BottomRight')
     TabOrder = 13
-    Visible = False
   end
   object TryAlteredRotationChk: TCheckBox
     Left = 16
